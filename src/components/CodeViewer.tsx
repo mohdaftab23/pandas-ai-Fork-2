@@ -65,9 +65,9 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
   const isBlocked = securityCheck && !securityCheck.isSafe;
 
   return (
-    <div className="mt-3 border border-stone-800 rounded-xl overflow-hidden bg-stone-900 text-stone-100 text-xs shadow-sm">
+    <div className="mt-3 border border-[#232c3a] rounded-xl overflow-hidden bg-[#0d1117] text-stone-100 text-xs shadow-md">
       {/* Top Bar */}
-      <div className="flex flex-wrap items-center justify-between px-3.5 py-2.5 bg-stone-950 border-b border-stone-800 gap-2">
+      <div className="flex flex-wrap items-center justify-between px-3.5 py-2.5 bg-[#121720] border-b border-[#232c3a] gap-2">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setExpanded(!expanded)}
@@ -108,7 +108,7 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
           <button
             onClick={() => handleRunInSandbox()}
             disabled={isRunning}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 hover:text-amber-200 border border-amber-500/30 text-[11px] font-medium transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 hover:text-amber-200 border border-amber-500/30 text-[11px] font-medium transition-colors cursor-pointer disabled:opacity-50"
             title="Execute within default sandbox environment"
           >
             {isRunning ? (
@@ -122,7 +122,7 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
           <button
             onClick={handleTestAttackMitigation}
             disabled={isRunning}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-rose-950 hover:bg-rose-900/80 text-rose-300 border border-rose-800 text-[11px] font-medium transition-colors cursor-pointer disabled:opacity-50"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-rose-950/80 hover:bg-rose-900/90 text-rose-300 border border-rose-800 text-[11px] font-medium transition-colors cursor-pointer disabled:opacity-50"
             title="Test Issue #1895 mitigation: attempts os.system('whoami') in sandbox"
           >
             <AlertTriangle className="w-3 h-3 text-rose-400" />
@@ -152,13 +152,13 @@ export const CodeViewer: React.FC<CodeViewerProps> = ({
       {/* Code Display */}
       {expanded && (
         <div className="relative">
-          <pre className="p-3.5 overflow-x-auto text-stone-200 font-mono text-[11px] leading-relaxed selection:bg-amber-500/30 border-b border-stone-800">
+          <pre className="p-3.5 overflow-x-auto text-amber-200/90 font-mono text-[11px] leading-relaxed selection:bg-amber-500/30 border-b border-[#232c3a] bg-[#090c12]">
             <code>{code}</code>
           </pre>
 
           {/* Sandbox Execution Terminal Output */}
           {runResult && (
-            <div className="p-3 bg-black/70 border-t border-stone-800 font-mono text-[11px]">
+            <div className="p-3 bg-black/85 border-t border-[#232c3a] font-mono text-[11px]">
               <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-stone-800/80">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-emerald-500"></span>

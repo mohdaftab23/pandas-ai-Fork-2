@@ -24,6 +24,8 @@ export interface QueryResponse {
   error?: string;
   executionTimeMs: number;
   timestamp: string;
+  engine?: 'gemini' | 'local';
+  modelName?: string;
   securityCheck?: {
     isSafe: boolean;
     violations: string[];
@@ -47,6 +49,8 @@ export async function processQuery(dataset: Dataset, query: string): Promise<Que
       type: 'string',
       answer: `🛡️ Security Alert (Issue #1895 Sandbox Defense): Query rejected due to detected prompt injection / OS command execution pattern (${promptInjectionCheck.reason}). Untrusted queries attempting shell access or sandbox evasion are blocked by default.`,
       codeSnippet: `# BLOCKED: Indirect Prompt Injection / Shell Command Pattern\n# Reason: ${promptInjectionCheck.reason}\n# Default sandbox enforced: Zero host access, safe builtins only.`,
+      engine: 'local',
+      modelName: 'PandasAI Security Guard',
       securityCheck: {
         isSafe: false,
         violations: [`Prompt injection attempt detected: ${promptInjectionCheck.reason}`],
@@ -58,8 +62,8 @@ export async function processQuery(dataset: Dataset, query: string): Promise<Que
     };
   }
 
-  // Try Gemini if API key is present
-  const geminiApiKey = process.env.GEMINI_API_KEY;
+  // Try Gemini AI if API key is present
+  const geminiApiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
   if (geminiApiKey) {
     try {
       const ai = new GoogleGenAI({ apiKey: geminiApiKey });
@@ -83,7 +87,7 @@ SECURITY GUARDRAILS & SANDBOX POLICY (Issue #1895 Remediation):
 Respond ONLY with valid JSON in this exact structure:
 {
   "type": "chart" | "dataframe" | "number" | "string",
-  "answer": "Clear, concise direct textual answer or finding",
+  "answer": "Clear, concise direct textual answer or finding in a natural, helpful tone",
   "pythonCode": "The equivalent Python PandasAI / pandas code that computes this",
   "chart": {
     "chartType": "bar" | "line" | "pie" | "scatter" | "histogram",
@@ -133,7 +137,7 @@ Note:
       const codeSecurityCheck = validatePythonCode(generatedCode);
 
       let finalSnippet = generatedCode;
-      let finalAnswer = parsed.answer || 'Query processed successfully.';
+      let finalAnswer = parsed.answer || 'Query processed successfully with Gemini AI.';
       if (!codeSecurityCheck.isSafe) {
         console.warn(`[Security Alert] Generated code failed sandbox policy:`, codeSecurityCheck.violations);
         finalSnippet = `# [SANDBOX SECURITY BLOCKED]\n# Untrusted code pattern detected in generated code:\n# ${codeSecurityCheck.violations.join('\n# ')}\n# Code execution failed closed to prevent RCE (Issue #1895 mitigation).`;
@@ -152,6 +156,8 @@ Note:
           rows: parsed.dataframe.rows,
           totalRows: parsed.dataframe.rows.length,
         } : undefined,
+        engine: 'gemini',
+        modelName: 'Gemini 3.8 Flash',
         securityCheck: {
           isSafe: codeSecurityCheck.isSafe,
           violations: codeSecurityCheck.violations,
@@ -162,12 +168,14 @@ Note:
         timestamp: new Date().toLocaleTimeString(),
       };
     } catch (err: any) {
-      console.warn('AI query processing falling back to local engine:', err?.message);
+      console.warn('Gemini AI call fell back to local engine:', err?.message);
     }
   }
 
   // Local PandasAI interpreter fallback (always accurate, safe, and based on real rows)
   const localResult = executeLocalQuery(dataset, sanitizedQuery, lowerQuery, startTime);
+  localResult.engine = 'local';
+  localResult.modelName = 'PandasAI Local Interpreter';
   localResult.securityCheck = {
     isSafe: true,
     violations: [],
@@ -217,6 +225,8 @@ export function executeLocalQuery(dataset: Dataset, originalQuery: string, q: st
         rows: summaryRows,
         totalRows: summaryRows.length,
       },
+      engine: 'local',
+      modelName: 'PandasAI Local Interpreter',
       executionTimeMs: Date.now() - startTime,
       timestamp: new Date().toLocaleTimeString(),
     };
@@ -224,7 +234,6 @@ export function executeLocalQuery(dataset: Dataset, originalQuery: string, q: st
 
   // 2. Histogram / Distribution query
   if (q.includes('histogram') || q.includes('distribution') || q.includes('spread')) {
-    // Find numeric column mentioned
     const targetCol = dataset.columns.find(c => c.type === 'numeric' && matchesCol(q, c.name)) 
       || dataset.columns.find(c => c.type === 'numeric');
 
@@ -249,131 +258,119 @@ export function executeLocalQuery(dataset: Dataset, originalQuery: string, q: st
         });
       }
 
-      values.forEach(val => {
-        let bIdx = Math.floor((val - min) / binWidth);
+      values.forEach(v => {
+        let bIdx = Math.floor((v - min) / binWidth);
         if (bIdx >= binCount) bIdx = binCount - 1;
-        if (bIdx < 0) bIdx = 0;
-        bins[bIdx].count++;
-      });
-
-      const codeSnippet = `# PandasAI Chart Generation\nimport pandasai as pai\nimport matplotlib.pyplot as plt\n\ndf = pai.DataFrame(dataset)\nresponse = df.chat("Plot the histogram of ${colName}")\n# Generated code: df['${colName}'].plot(kind='hist', bins=8)`;
-
-      return {
-        id: 'res_' + Math.random().toString(36).substring(2, 9),
-        query: originalQuery,
-        type: 'chart',
-        answer: `Generated distribution for ${colName} across ${binCount} buckets (range: ${min} to ${max}, mean: ${targetCol.mean}).`,
-        codeSnippet,
-        chart: {
-          chartType: 'histogram',
-          title: `Distribution of ${colName}`,
-          xKey: 'range',
-          yKey: 'count',
-          data: bins.map(b => ({ range: b.range, count: b.count })),
-        },
-        executionTimeMs: Date.now() - startTime,
-        timestamp: new Date().toLocaleTimeString(),
-      };
-    }
-  }
-
-  // 3. Average / Mean / Aggregation queries
-  if (q.includes('average') || q.includes('mean') || q.includes('avg') || q.includes('by')) {
-    // Find numeric metric and category group column
-    const metricCol = dataset.columns.find(c => c.type === 'numeric' && matchesCol(q, c.name)) 
-      || dataset.columns.find(c => c.type === 'numeric');
-    const groupCol = dataset.columns.find(c => c.name.toLowerCase() !== metricCol?.name.toLowerCase() && matchesCol(q, c.name))
-      || dataset.columns.find(c => c.type === 'string');
-
-    if (metricCol && groupCol) {
-      const groupMap = new Map<string, { sum: number; count: number }>();
-      rows.forEach(r => {
-        const rawGroup = r[groupCol.name];
-        const gKey = rawGroup === null || rawGroup === undefined ? 'Unknown' : String(rawGroup);
-        const val = Number(r[metricCol.name]);
-        if (!isNaN(val)) {
-          const cur = groupMap.get(gKey) || { sum: 0, count: 0 };
-          cur.sum += val;
-          cur.count += 1;
-          groupMap.set(gKey, cur);
+        if (bIdx >= 0 && bins[bIdx]) {
+          bins[bIdx].count++;
         }
       });
 
-      const chartData = Array.from(groupMap.entries()).map(([group, stats]) => ({
-        [groupCol.name]: group,
-        [`avg_${metricCol.name}`]: Number((stats.sum / (stats.count || 1)).toFixed(2)),
-        count: stats.count,
-      })).slice(0, 10);
-
-      const isChart = q.includes('plot') || q.includes('chart') || q.includes('bar') || q.includes('visualize');
-
-      const codeSnippet = `# PandasAI Aggregation & Grouping\nimport pandasai as pai\n\ndf = pai.DataFrame(dataset)\nresult = df.groupby('${groupCol.name}')['${metricCol.name}'].mean().reset_index()\nprint(result)`;
-
-      const textFindings = chartData.map(d => `${d[groupCol.name]}: ${d[`avg_${metricCol.name}`]}`).join(', ');
+      const codeSnippet = `# PandasAI Histogram\nimport pandasai as pai\n\ndf = pai.DataFrame(dataset)\ndf.plot_histogram(column='${colName}', bins=8)`;
 
       return {
         id: 'res_' + Math.random().toString(36).substring(2, 9),
         query: originalQuery,
-        type: isChart ? 'chart' : 'dataframe',
-        answer: `Average ${metricCol.name} grouped by ${groupCol.name}: ${textFindings}.`,
+        type: 'chart',
+        answer: `Distribution of ${colName}: min ${min}, max ${max}, with peak frequency in range "${bins.reduce((a, b) => a.count > b.count ? a : b).range}".`,
         codeSnippet,
-        chart: isChart ? {
+        chart: {
           chartType: 'bar',
-          title: `Average ${metricCol.name} by ${groupCol.name}`,
-          xKey: groupCol.name,
-          yKey: `avg_${metricCol.name}`,
-          data: chartData,
-        } : undefined,
-        dataframe: {
-          columns: [groupCol.name, `avg_${metricCol.name}`, 'count'],
-          rows: chartData,
-          totalRows: chartData.length,
+          title: `Distribution of ${colName}`,
+          xKey: 'range',
+          yKey: 'count',
+          data: bins,
         },
+        engine: 'local',
+        modelName: 'PandasAI Local Interpreter',
         executionTimeMs: Date.now() - startTime,
         timestamp: new Date().toLocaleTimeString(),
       };
     }
   }
 
-  // 4. Count / Breakdown queries
-  if (q.includes('count') || q.includes('how many') || q.includes('breakdown') || q.includes('pie') || q.includes('status')) {
-    const targetCol = dataset.columns.find(c => matchesCol(q, c.name)) 
-      || dataset.columns.find(c => c.type === 'string');
+  // 3. Averages / Aggregations grouped by Category
+  if (q.includes('average') || q.includes('mean') || q.includes('by') || q.includes('per') || q.includes('group')) {
+    const numCol = dataset.columns.find(c => c.type === 'numeric' && matchesCol(q, c.name))
+      || dataset.columns.find(c => c.type === 'numeric');
+    const catCol = dataset.columns.find(c => (c.type === 'string' || c.distinctCount < 10) && matchesCol(q, c.name))
+      || dataset.columns.find(c => c.type === 'string' && c.distinctCount < 15);
 
-    if (targetCol) {
-      const counts: Record<string, number> = {};
+    if (numCol && catCol) {
+      const groups: Record<string, { sum: number; count: number }> = {};
       rows.forEach(r => {
-        const val = r[targetCol.name];
-        const key = val === null || val === undefined ? 'None' : String(val);
-        counts[key] = (counts[key] || 0) + 1;
+        const cat = String(r[catCol.name] ?? 'Unknown');
+        const num = Number(r[numCol.name]);
+        if (!isNaN(num) && num !== null) {
+          if (!groups[cat]) groups[cat] = { sum: 0, count: 0 };
+          groups[cat].sum += num;
+          groups[cat].count += 1;
+        }
       });
 
-      const data = Object.entries(counts).map(([name, value]) => ({
-        [targetCol.name]: name,
-        Count: value,
-        Percentage: Number(((value / numRows) * 100).toFixed(1)),
-      })).sort((a, b) => b.Count - a.Count);
+      const chartData = Object.entries(groups).map(([cat, val]) => ({
+        [catCol.name]: cat,
+        [`avg_${numCol.name}`]: Math.round((val.sum / val.count) * 10) / 10,
+        count: val.count,
+      })).slice(0, 10);
 
-      const codeSnippet = `# PandasAI Value Counts\nimport pandasai as pai\n\ndf = pai.DataFrame(dataset)\nbreakdown = df['${targetCol.name}'].value_counts().reset_index()\nprint(breakdown)`;
+      const codeSnippet = `# PandasAI Grouped Aggregation\nimport pandasai as pai\n\ndf = pai.DataFrame(dataset)\nresult = df.groupby('${catCol.name}')['${numCol.name}'].mean().reset_index()\nprint(result)`;
 
       return {
         id: 'res_' + Math.random().toString(36).substring(2, 9),
         query: originalQuery,
         type: 'chart',
-        answer: `Breakdown of records by ${targetCol.name}. Total distinct categories: ${data.length}.`,
+        answer: `Average ${numCol.name} grouped by ${catCol.name}. Found ${chartData.length} distinct groups.`,
         codeSnippet,
         chart: {
-          chartType: data.length <= 5 ? 'pie' : 'bar',
-          title: `Records by ${targetCol.name}`,
-          xKey: targetCol.name,
-          yKey: 'Count',
-          data,
+          chartType: 'bar',
+          title: `Average ${numCol.name} by ${catCol.name}`,
+          xKey: catCol.name,
+          yKey: `avg_${numCol.name}`,
+          data: chartData,
         },
-        dataframe: {
-          columns: [targetCol.name, 'Count', 'Percentage'],
-          rows: data,
-          totalRows: data.length,
+        engine: 'local',
+        modelName: 'PandasAI Local Interpreter',
+        executionTimeMs: Date.now() - startTime,
+        timestamp: new Date().toLocaleTimeString(),
+      };
+    }
+  }
+
+  // 4. Breakdown / Composition (Pie chart)
+  if (q.includes('pie') || q.includes('ratio') || q.includes('proportion') || q.includes('share') || q.includes('percentage') || q.includes('breakdown')) {
+    const catCol = dataset.columns.find(c => c.distinctCount >= 2 && c.distinctCount <= 8 && matchesCol(q, c.name))
+      || dataset.columns.find(c => c.distinctCount >= 2 && c.distinctCount <= 8);
+
+    if (catCol) {
+      const counts: Record<string, number> = {};
+      rows.forEach(r => {
+        const cat = String(r[catCol.name] ?? 'Other');
+        counts[cat] = (counts[cat] || 0) + 1;
+      });
+
+      const pieData = Object.entries(counts).map(([name, value]) => ({
+        name,
+        value,
+      }));
+
+      const codeSnippet = `# PandasAI Categorical Distribution\nimport pandasai as pai\n\ndf = pai.DataFrame(dataset)\nresult = df['${catCol.name}'].value_counts()\nprint(result)`;
+
+      return {
+        id: 'res_' + Math.random().toString(36).substring(2, 9),
+        query: originalQuery,
+        type: 'chart',
+        answer: `Categorical breakdown of ${catCol.name} across ${numRows.toLocaleString()} rows.`,
+        codeSnippet,
+        chart: {
+          chartType: 'pie',
+          title: `${catCol.name} Share & Distribution`,
+          xKey: 'name',
+          yKey: 'value',
+          data: pieData,
         },
+        engine: 'local',
+        modelName: 'PandasAI Local Interpreter',
         executionTimeMs: Date.now() - startTime,
         timestamp: new Date().toLocaleTimeString(),
       };
@@ -417,6 +414,8 @@ export function executeLocalQuery(dataset: Dataset, originalQuery: string, q: st
           }),
           totalRows: topRows.length,
         },
+        engine: 'local',
+        modelName: 'PandasAI Local Interpreter',
         executionTimeMs: Date.now() - startTime,
         timestamp: new Date().toLocaleTimeString(),
       };
@@ -442,7 +441,98 @@ export function executeLocalQuery(dataset: Dataset, originalQuery: string, q: st
       rows: sampleRows,
       totalRows: 5,
     },
+    engine: 'local',
+    modelName: 'PandasAI Local Interpreter',
     executionTimeMs: Date.now() - startTime,
     timestamp: new Date().toLocaleTimeString(),
+  };
+}
+
+/**
+ * Generates natural statistical insights for a dataset using Gemini AI.
+ */
+export async function generateDatasetInsights(dataset: Dataset): Promise<{
+  insights: string[];
+  suggestedQueries: string[];
+  summary: string;
+  source: 'gemini' | 'local';
+}> {
+  const geminiApiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+  if (geminiApiKey) {
+    try {
+      const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+      const prompt = `You are a Senior Data Scientist analyzing this dataset:
+Name: ${dataset.name}
+Description: ${dataset.description}
+Total Records: ${dataset.rows.length}
+Columns: ${JSON.stringify(dataset.columns.map(c => ({
+  name: c.name,
+  type: c.type,
+  min: c.min,
+  max: c.max,
+  mean: c.mean,
+  nullCount: c.nullCount,
+  distinctCount: c.distinctCount,
+  sample: c.sampleValues.slice(0, 3),
+})))}
+
+Produce 3-4 natural, high-value data insights about potential correlations, distribution patterns, or anomalies, along with 3 targeted queries the user should explore.
+Respond in valid JSON:
+{
+  "summary": "1-2 sentence executive summary of the dataset's nature",
+  "insights": [
+    "Insight 1 with specific metric or trend",
+    "Insight 2 with category comparison or relationship",
+    "Insight 3 with key highlight or actionable takeaway"
+  ],
+  "suggestedQueries": [
+    "Query 1 to run",
+    "Query 2 to run",
+    "Query 3 to run"
+  ]
+}`;
+
+      const res = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+        },
+      });
+
+      const parsed = JSON.parse(res.text || '{}');
+      if (parsed.insights && parsed.insights.length > 0) {
+        return {
+          summary: parsed.summary || `${dataset.name} contains ${dataset.rows.length} records ready for analysis.`,
+          insights: parsed.insights,
+          suggestedQueries: parsed.suggestedQueries || dataset.suggestedPrompts.slice(0, 3),
+          source: 'gemini',
+        };
+      }
+    } catch (err: any) {
+      console.warn('Gemini insights generation fell back to heuristic generator:', err?.message);
+    }
+  }
+
+  // Natural heuristic fallback
+  const numeric = dataset.columns.filter(c => c.type === 'numeric');
+  const categorical = dataset.columns.filter(c => c.type === 'string');
+  const insights = [
+    `Contains ${dataset.rows.length.toLocaleString()} total observations across ${dataset.columns.length} features (${numeric.length} numeric, ${categorical.length} categorical).`,
+  ];
+  if (numeric.length > 0) {
+    const mainNum = numeric[0];
+    insights.push(`Primary numeric metric "${mainNum.name}" ranges from ${mainNum.min} to ${mainNum.max} with an average of ${mainNum.mean ?? 'N/A'}.`);
+  }
+  if (categorical.length > 0) {
+    const mainCat = categorical[0];
+    insights.push(`Categorical segment "${mainCat.name}" features ${mainCat.distinctCount} distinct segments across the data.`);
+  }
+
+  return {
+    summary: `${dataset.name} holds clean, structured records ready for conversational analysis and visualization.`,
+    insights,
+    suggestedQueries: dataset.suggestedPrompts.slice(0, 3),
+    source: 'local',
   };
 }

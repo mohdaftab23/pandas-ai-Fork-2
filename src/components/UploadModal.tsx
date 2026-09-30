@@ -79,48 +79,50 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/60 backdrop-blur-xs">
-      <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl border border-stone-200">
-        <div className="flex items-center justify-between pb-4 border-b border-stone-100">
-          <div className="flex items-center gap-2">
-            <Upload className="w-5 h-5 text-amber-600" />
-            <h3 className="text-base font-bold text-stone-900">Upload Dataset</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs">
+      <div className="bg-[#121620] rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-[#273346]">
+        <div className="flex items-center justify-between pb-4 border-b border-[#232c3a]">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+              <Upload className="w-4 h-4" />
+            </div>
+            <h3 className="text-base font-bold text-stone-100">Upload Dataset</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-stone-100 text-stone-400 hover:text-stone-700 cursor-pointer"
+            className="p-1 rounded-lg hover:bg-stone-800 text-stone-400 hover:text-stone-200 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {error && (
-          <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-lg flex items-center gap-2 text-rose-700 text-xs">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+          <div className="mt-4 p-3 bg-rose-950/60 border border-rose-800/80 rounded-xl flex items-center gap-2 text-rose-300 text-xs">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="mt-4 space-y-4 text-xs">
           <div>
-            <label className="block font-medium text-stone-700 mb-1">Dataset Name</label>
+            <label className="block font-medium text-stone-300 mb-1.5">Dataset Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Q3 Sales Records"
-              className="w-full bg-stone-50 border border-stone-300 rounded-lg px-3 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              className="w-full bg-[#18202d] border border-[#293649] rounded-xl px-3.5 py-2.5 text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 placeholder:text-stone-500"
             />
           </div>
 
           <div>
-            <label className="block font-medium text-stone-700 mb-1">Description (Optional)</label>
+            <label className="block font-medium text-stone-300 mb-1.5">Description (Optional)</label>
             <input
               type="text"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="e.g. Sales numbers and customer acquisition costs"
-              className="w-full bg-stone-50 border border-stone-300 rounded-lg px-3 py-2 text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              className="w-full bg-[#18202d] border border-[#293649] rounded-xl px-3.5 py-2.5 text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 placeholder:text-stone-500"
             />
           </div>
 
@@ -128,7 +130,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
           <div
             onDragOver={(e) => e.preventDefault()}
             onDrop={handleDrop}
-            className="border-2 border-dashed border-stone-300 hover:border-amber-500 bg-stone-50 hover:bg-amber-50/20 rounded-xl p-6 text-center cursor-pointer transition-colors"
+            className="border-2 border-dashed border-[#293649] hover:border-amber-500/60 bg-[#161c26] hover:bg-[#1c2432] rounded-2xl p-6 text-center cursor-pointer transition-colors"
             onClick={() => document.getElementById('file-upload-input')?.click()}
           >
             <input
@@ -143,7 +145,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
               }}
             />
             <FileText className="w-8 h-8 text-stone-400 mx-auto mb-2" />
-            <p className="font-semibold text-stone-800">
+            <p className="font-semibold text-stone-200">
               {fileName ? fileName : 'Drop your CSV file here, or click to browse'}
             </p>
             <p className="text-stone-400 text-[11px] mt-1">Supports standard CSV files with headers</p>
@@ -151,7 +153,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
 
           {/* Fallback raw CSV text area */}
           <div>
-            <label className="block font-medium text-stone-700 mb-1">Or paste CSV content:</label>
+            <label className="block font-medium text-stone-300 mb-1.5">Or paste CSV content:</label>
             <textarea
               rows={3}
               value={csvContent}
@@ -160,22 +162,22 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, onSuc
                 setFileName('');
               }}
               placeholder="id,name,value\n1,Alpha,42\n2,Beta,99"
-              className="w-full font-mono text-[11px] bg-stone-50 border border-stone-300 rounded-lg p-2.5 text-stone-900 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+              className="w-full font-mono text-[11px] bg-[#18202d] border border-[#293649] rounded-xl p-2.5 text-stone-100 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-400 placeholder:text-stone-500"
             />
           </div>
 
-          <div className="flex items-center justify-end gap-2 pt-3 border-t border-stone-100">
+          <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#232c3a]">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-lg border border-stone-300 text-stone-700 hover:bg-stone-50 font-medium cursor-pointer"
+              className="px-4 py-2 rounded-xl border border-[#293649] text-stone-300 hover:bg-[#18202d] font-medium cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-medium cursor-pointer shadow-xs"
+              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-stone-950 font-bold cursor-pointer shadow-sm transition-colors"
             >
               {isSubmitting ? 'Loading...' : 'Ingest Dataset'}
             </button>

@@ -22,6 +22,11 @@ SecureData AI combines a familiar data-explorer workflow with conversational ana
 | 🧬 **Schema Inspector** | Review null counts, distinct values, min/max, averages, and sample values. |
 | 🛡️ **Secure execution layer** | Validate and restrict generated code before it reaches the execution environment. |
 | 🧪 **Attack-defense testing** | Test whether common OS-command injection patterns are blocked. |
+| ⚡ **Keyboard navigation** | Global shortcuts (`Cmd/Ctrl+K` dataset switcher, `Cmd/Ctrl+Enter` message submit, `Cmd/Ctrl+1/2/3` tab navigation). |
+| 💾 **JSON & CSV export** | Export conversational history, generated code, and query dataframe results as JSON or CSV directly from `ChatQueryView`. |
+| 🤖 **Gemini AI engine** | Powered by Google Gemini 3.8 Flash for natural analytics reasoning, visual query planning, and statistical dataset insights. |
+| 🌿 **Natural dark aesthetic** | Earthen obsidian theme with warm honey amber accents, organic rounded containers, and high-legibility dark Recharts visualizations. |
+| 🔄 **Session persistence** | Automatic `localStorage` synchronization preserving conversation histories and active dataset selections across page reloads. |
 
 ---
 
@@ -231,6 +236,33 @@ A security control should be considered successful only when unsafe code is reje
 
 ---
 
+## ⌨️ Global Keyboard Shortcuts & Data Export
+
+### Global Keyboard Shortcuts
+To maximize navigation speed and analytic efficiency, global shortcuts are active across the app:
+
+| Shortcut | Action | Description |
+|---|---|---|
+| `Cmd/Ctrl + Enter` | **Send Message** | Submits your current query or prompts the active input field. |
+| `Cmd/Ctrl + K` | **Switch Dataset** | Opens the instant command palette with fuzzy search and arrow-key selection. |
+| `Cmd/Ctrl + 1` | **AI Chat** | Jumps directly to the conversational analytics interface. |
+| `Cmd/Ctrl + 2` | **Data Explorer** | Swaps to the raw tabular data browser with sorting and search. |
+| `Cmd/Ctrl + 3` | **Schema Inspector** | Opens column null checks, sample stats, and distributions. |
+| `Cmd/Ctrl + U` | **Upload CSV** | Opens the drag-and-drop CSV dataset ingestion modal. |
+| `?` or `Cmd/Ctrl + /` | **Shortcuts Guide** | Opens the shortcuts reference modal. |
+| `Escape` | **Dismiss** | Closes any open modal, dialog, or command palette. |
+
+### Conversation & Results Export
+The `ChatQueryView` component includes an **Export** toolbar and per-result export actions:
+- **Chat Conversation Export**:
+  - **JSON (`.json`)**: Exports the full structured conversation including messages, generated Python snippets, execution timings, and sandbox security audits.
+  - **CSV (`.csv`)**: RFC4180-compliant export of conversational Q&A rows.
+- **Data Results Export**:
+  - **CSV (`.csv`)**: Exports tabular dataframe or chart data into clean comma-separated format.
+  - **JSON (`.json`)**: Exports data rows as an array of structured JSON records.
+
+---
+
 ## 📁 Project structure
 
 ```text
@@ -245,17 +277,22 @@ A security control should be considered successful only when unsafe code is reje
 │
 ├── src/
 │   ├── components/
-│   │   ├── ChatQueryView.tsx
 │   │   ├── ChartRenderer.tsx
+│   │   ├── ChatQueryView.tsx
 │   │   ├── CodeViewer.tsx
 │   │   ├── DataExplorerView.tsx
 │   │   ├── DataframeTable.tsx
+│   │   ├── DatasetSwitcherModal.tsx
+│   │   ├── ExportModal.tsx
+│   │   ├── KeyboardShortcutsModal.tsx
 │   │   ├── Navbar.tsx
 │   │   ├── SchemaView.tsx
 │   │   └── UploadModal.tsx
+│   ├── utils/
+│   │   └── exportUtils.ts
 │   ├── App.tsx
 │   ├── main.tsx
-│   ├── types.ts
+│   └── types.ts
 │   └── index.css
 │
 ├── .env.example

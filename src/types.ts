@@ -47,6 +47,8 @@ export interface QueryResult {
   error?: string;
   executionTimeMs: number;
   timestamp: string;
+  engine?: 'gemini' | 'local';
+  modelName?: string;
   securityCheck?: {
     isSafe: boolean;
     violations: string[];

@@ -20,15 +20,16 @@ interface ChartRendererProps {
   config: ChartConfig;
 }
 
+// Natural earthen & organic dark-theme colors
 const COLORS = [
-  '#f59e0b', // amber-500
-  '#0284c7', // sky-600
-  '#10b981', // emerald-500
-  '#8b5cf6', // violet-500
-  '#f43f5e', // rose-500
-  '#14b8a6', // teal-500
-  '#6366f1', // indigo-500
-  '#eab308', // yellow-500
+  '#f59e0b', // warm honey amber
+  '#10b981', // forest emerald
+  '#38bdf8', // sky
+  '#a855f7', // soft amethyst
+  '#fb7185', // warm coral
+  '#2dd4bf', // sage teal
+  '#fb923c', // terracotta
+  '#e2e8f0', // soft stone
 ];
 
 export const ChartRenderer: React.FC<ChartRendererProps> = ({ config }) => {
@@ -36,7 +37,7 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({ config }) => {
 
   if (!data || data.length === 0) {
     return (
-      <div className="p-4 text-center text-stone-500 text-xs italic bg-stone-50 rounded-lg border border-stone-200">
+      <div className="p-4 text-center text-stone-400 text-xs italic bg-[#131822] rounded-xl border border-[#232c3a]">
         No chart data available to plot
       </div>
     );
@@ -45,11 +46,21 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({ config }) => {
   // Derive value key if not directly supplied
   const effectiveYKey = yKey || Object.keys(data[0]).find((k) => k !== xKey) || '';
 
+  const tooltipStyle = {
+    backgroundColor: '#18202d',
+    borderColor: '#2f3c4e',
+    borderRadius: '10px',
+    fontSize: '12px',
+    color: '#f8fafc',
+    boxShadow: '0 8px 16px -2px rgb(0 0 0 / 0.5)',
+  };
+
   return (
-    <div className="w-full bg-white p-4 rounded-xl border border-stone-200/80 shadow-xs">
+    <div className="w-full bg-[#131822] p-4 sm:p-5 rounded-2xl border border-[#232c3a] shadow-lg">
       {title && (
-        <h4 className="text-sm font-semibold text-stone-800 mb-3 tracking-tight">
-          {title}
+        <h4 className="text-sm font-semibold text-stone-200 mb-3 tracking-tight flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+          <span>{title}</span>
         </h4>
       )}
 
@@ -57,16 +68,8 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({ config }) => {
         <ResponsiveContainer width="100%" height="100%">
           {chartType === 'pie' ? (
             <PieChart>
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#ffffff',
-                  borderColor: '#e7e5e4',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px', color: '#94a3b8' }} />
               <Pie
                 data={data}
                 dataKey={effectiveYKey}
@@ -86,62 +89,46 @@ export const ChartRenderer: React.FC<ChartRendererProps> = ({ config }) => {
             </PieChart>
           ) : chartType === 'line' ? (
             <LineChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
               <XAxis
                 dataKey={xKey}
-                tick={{ fontSize: 11, fill: '#78716c' }}
+                tick={{ fontSize: 11, fill: '#94a3b8' }}
                 tickLine={false}
-                axisLine={{ stroke: '#e7e5e4' }}
+                axisLine={{ stroke: '#2d3748' }}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: '#78716c' }}
+                tick={{ fontSize: 11, fill: '#94a3b8' }}
                 tickLine={false}
-                axisLine={{ stroke: '#e7e5e4' }}
+                axisLine={{ stroke: '#2d3748' }}
               />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#ffffff',
-                  borderColor: '#e7e5e4',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: '11px' }} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend wrapperStyle={{ fontSize: '11px', color: '#94a3b8' }} />
               <Line
                 type="monotone"
                 dataKey={effectiveYKey}
-                stroke="#0284c7"
+                stroke="#38bdf8"
                 strokeWidth={2.5}
-                dot={{ r: 4, fill: '#0284c7' }}
+                dot={{ r: 4, fill: '#38bdf8' }}
                 activeDot={{ r: 6 }}
               />
             </LineChart>
           ) : (
             // Bar / Histogram default
             <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 20 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f5f5f4" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
               <XAxis
                 dataKey={xKey}
-                tick={{ fontSize: 11, fill: '#78716c' }}
+                tick={{ fontSize: 11, fill: '#94a3b8' }}
                 tickLine={false}
-                axisLine={{ stroke: '#e7e5e4' }}
+                axisLine={{ stroke: '#2d3748' }}
               />
               <YAxis
-                tick={{ fontSize: 11, fill: '#78716c' }}
+                tick={{ fontSize: 11, fill: '#94a3b8' }}
                 tickLine={false}
-                axisLine={{ stroke: '#e7e5e4' }}
+                axisLine={{ stroke: '#2d3748' }}
               />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#ffffff',
-                  borderColor: '#e7e5e4',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                }}
-              />
-              <Legend wrapperStyle={{ fontSize: '11px' }} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Legend wrapperStyle={{ fontSize: '11px', color: '#94a3b8' }} />
               <Bar
                 dataKey={effectiveYKey}
                 fill="#f59e0b"

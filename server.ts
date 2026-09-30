@@ -3,7 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { DatasetRepository } from './server/dataEngine';
-import { processQuery } from './server/queryEngine';
+import { processQuery, generateDatasetInsights } from './server/queryEngine';
 import { executeInSecureSandbox } from './server/security/sandboxExecutor';
 import { validatePythonCode, detectPromptInjection, sanitizeUntrustedInput } from './server/security/codeValidator';
 
@@ -18,9 +18,12 @@ async function startServer() {
 
   // Health endpoint
   app.get('/api/health', (req, res) => {
+    const hasKey = Boolean(process.env.GEMINI_API_KEY || process.env.API_KEY);
     res.json({
       status: 'ok',
-      hasGeminiKey: Boolean(process.env.GEMINI_API_KEY),
+      hasGeminiKey: hasKey,
+      geminiModel: 'gemini-3.8-flash',
+      engine: hasKey ? 'Gemini 3.8 Flash' : 'PandasAI Local Interpreter',
       datasetsCount: repo.getAllSummaries().length,
       sandbox: {
         enabledByDefault: true,
@@ -100,6 +103,20 @@ async function startServer() {
       sampleRows: dataset.rows.slice(0, 5),
       suggestedPrompts: dataset.suggestedPrompts,
     });
+  });
+
+  // Get Gemini AI insights for a dataset
+  app.get('/api/datasets/:id/insights', async (req, res) => {
+    try {
+      const dataset = repo.getDataset(req.params.id);
+      if (!dataset) {
+        return res.status(404).json({ error: 'Dataset not found' });
+      }
+      const insights = await generateDatasetInsights(dataset);
+      res.json(insights);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message || 'Failed to generate insights' });
+    }
   });
 
   // Get paginated rows
